@@ -17,6 +17,11 @@ namespace DocFx.Plugin.LastModified
 
         public Manifest Process(Manifest manifest, string outputFolder)
         {
+            string versionInfo = Assembly.GetExecutingAssembly()
+                                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                     ?.InformationalVersion ??
+                                 Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            Logger.LogInfo($"Version: {versionInfo}");
             Logger.LogInfo("Begin adding last modified date to items...");
             foreach (var manifestItem in manifest.Files.Where(x => x.DocumentType == "Conceptual"))
             {
