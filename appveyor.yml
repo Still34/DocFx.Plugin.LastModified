@@ -4,6 +4,5 @@ build:
 before_build:
 - cmd: dotnet restore
 after_build:
-- ps: dotnet build -c Release -o "../$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_COMMIT"
-- ps: Get-ChildItem $env:APPVEYOR_PROJECT_NAME-* | % { 7z a -tzip $_.Name $_.FullName }
-- ps: Get-ChildItem *.zip | % { Push-AppveyorArtifact $_.FullName }
+- ps: dotnet build -c Release -o "..\output"
+- ps: Get-ChildItem output -Recurse -Filter LastModifiedPostProcessor.dll | % { Push-AppveyorArtifact $_.FullName }
