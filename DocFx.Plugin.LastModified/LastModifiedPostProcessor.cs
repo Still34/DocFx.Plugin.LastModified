@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Composition;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using HtmlAgilityPack;
 using Microsoft.DocAsCode.Common;
 using Microsoft.DocAsCode.Plugins;
