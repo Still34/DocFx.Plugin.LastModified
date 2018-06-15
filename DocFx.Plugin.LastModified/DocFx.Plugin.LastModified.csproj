@@ -4,7 +4,14 @@
     <TargetFramework>net461</TargetFramework>
     <AssemblyName>LastModifiedPostProcessor</AssemblyName>
     <RootNamespace>DocFx.Plugin.LastModified</RootNamespace>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
+    <RepositoryUrl>https://github.com/Still34/DocFx.Plugin.LastModified</RepositoryUrl>
+    <PackageLicenseUrl>https://github.com/Still34/DocFx.Plugin.LastModified/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageTags>DocFX</PackageTags>
+    <Description>A post-processor plugin for DocFX v2 that adds the last commit date of the conceptual document to the end of the page.</Description>
+    <Copyright>Still Hsu © 2018</Copyright>
+    <Company />
   </PropertyGroup>
 
   <ItemGroup>
