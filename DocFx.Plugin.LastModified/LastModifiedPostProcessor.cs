@@ -14,6 +14,8 @@ namespace DocFx.Plugin.LastModified
     [Export(nameof(LastModifiedPostProcessor), typeof(IPostProcessor))]
     public class LastModifiedPostProcessor : IPostProcessor
     {
+        private int _addedFiles;
+
         public ImmutableDictionary<string, object> PrepareMetadata(ImmutableDictionary<string, object> metadata) =>
             metadata;
 
@@ -46,6 +48,7 @@ namespace DocFx.Plugin.LastModified
                     }
                     WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
                 }
+                Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
             }
             return manifest;
         }
@@ -77,7 +80,7 @@ namespace DocFx.Plugin.LastModified
 
         private void WriteModifiedDate(string sourcePath, string outputPath, DateTimeOffset modifiedDate, string modifiedReason = null)
         {
-            Logger.LogInfo($"Writing {modifiedDate} from {sourcePath} to {outputPath}");
+            Logger.LogVerbose($"Writing {modifiedDate} from {sourcePath} to {outputPath}");
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.Load(outputPath);
@@ -107,6 +110,7 @@ namespace DocFx.Plugin.LastModified
             }
 
             htmlDoc.Save(outputPath);
+            _addedFiles++;
         }
     }
 }
