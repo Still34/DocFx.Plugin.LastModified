@@ -48,8 +48,8 @@ namespace DocFx.Plugin.LastModified
                     }
                     WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
                 }
-                Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
             }
+            Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
             return manifest;
         }
 
