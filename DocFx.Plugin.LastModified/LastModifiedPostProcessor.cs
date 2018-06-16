@@ -32,9 +32,11 @@ namespace DocFx.Plugin.LastModified
                     string sourcePath = Path.Combine(manifest.SourceBasePath, manifestItem.SourceRelativePath);
                     string outputPath = Path.Combine(outputFolder, manifestItemOutputFile.Value.RelativePath);
                     DateTimeOffset lastModified;
+                    string modifiedReason = null;
                     try
                     {
-                        lastModified = GetCommitDate(sourcePath);
+                        lastModified = DateTimeOffset.Parse(GetCommitInfo(sourcePath, CommitDataType.Date));
+                        modifiedReason = GetCommitInfo(sourcePath, CommitDataType.Body);
                     }
                     catch (Exception e)
                     {
@@ -42,29 +44,38 @@ namespace DocFx.Plugin.LastModified
                         Logger.LogVerbose("Failed to fetch commit date, falling back to system write time.");
                         lastModified = GetWriteTimeFromFile(sourcePath);
                     }
-                    WriteModifiedDate(lastModified, sourcePath, outputPath);
+                    WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
                 }
             }
             return manifest;
         }
 
-        private DateTimeOffset GetCommitDate(string sourcePath)
+        private string GetCommitInfo(string sourcePath, CommitDataType dataType)
         {
+            string formatString = null;
+            switch (dataType)
+            {
+                case CommitDataType.Date:
+                    formatString = "%cd --date=iso8601";
+                    break;
+                case CommitDataType.Body:
+                    formatString = "%B";
+                    break;
+            }
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "git",
-                Arguments = $"log -1 --format=%cd --date=iso8601 {sourcePath}",
+                Arguments = $"log -1 --format={formatString} {sourcePath}",
                 RedirectStandardOutput = true,
                 UseShellExecute = false
             };
             var process = System.Diagnostics.Process.Start(processStartInfo);
-            string output = process?.StandardOutput.ReadToEnd();
-            return DateTimeOffset.Parse(output);
+            return process?.StandardOutput.ReadToEnd();
         }
 
         private DateTimeOffset GetWriteTimeFromFile(string sourcePath) => File.GetLastWriteTimeUtc(sourcePath);
 
-        private void WriteModifiedDate(DateTimeOffset modifiedDate, string sourcePath, string outputPath)
+        private void WriteModifiedDate(string sourcePath, string outputPath, DateTimeOffset modifiedDate, string modifiedReason = null)
         {
             Logger.LogInfo($"Writing {modifiedDate} from {sourcePath} to {outputPath}");
 
@@ -84,6 +95,16 @@ namespace DocFx.Plugin.LastModified
 
             articleNode.AppendChild(separatorNode);
             articleNode.AppendChild(paragraphNode);
+
+            if (!string.IsNullOrEmpty(modifiedReason))
+            {
+                var preNode = htmlDoc.CreateElement("pre");
+                var codeNode = htmlDoc.CreateElement("code");
+                codeNode.SetAttributeValue("class", "xml");
+                codeNode.InnerHtml = $"Reason: {modifiedReason.Trim()}";
+                preNode.AppendChild(codeNode);
+                articleNode.AppendChild(preNode);
+            }
 
             htmlDoc.Save(outputPath);
         }
