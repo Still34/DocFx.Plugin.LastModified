@@ -101,16 +101,57 @@ namespace DocFx.Plugin.LastModified
 
             if (!string.IsNullOrEmpty(modifiedReason))
             {
-                var preNode = htmlDoc.CreateElement("pre");
-                var codeNode = htmlDoc.CreateElement("code");
-                codeNode.SetAttributeValue("class", "xml");
-                codeNode.InnerHtml = $"Reason: {modifiedReason.Trim()}";
-                preNode.AppendChild(codeNode);
-                articleNode.AppendChild(preNode);
+                InjectCollapseScript(htmlDoc);
+
+                var collapsibleNode = htmlDoc.CreateElement("div");
+                collapsibleNode.SetAttributeValue("class", "collapse-container");
+                collapsibleNode.SetAttributeValue("id", "accordion");
+                var reasonHeaderNode = htmlDoc.CreateElement("p");
+                reasonHeaderNode.InnerHtml = "<span class=\"arrow-r\"></span>Commit Message";
+                var reasonContainerNode = htmlDoc.CreateElement("div");
+                var preCodeBlockNode = htmlDoc.CreateElement("pre");
+                var codeBlockNode = htmlDoc.CreateElement("code");
+                codeBlockNode.SetAttributeValue("class", "xml");
+                codeBlockNode.InnerHtml = modifiedReason.Trim();
+
+                preCodeBlockNode.AppendChild(codeBlockNode);
+                reasonContainerNode.AppendChild(preCodeBlockNode);
+                collapsibleNode.AppendChild(reasonHeaderNode);
+                collapsibleNode.AppendChild(reasonContainerNode);
+                articleNode.AppendChild(collapsibleNode);
             }
 
             htmlDoc.Save(outputPath);
             _addedFiles++;
+        }
+
+        /// <summary>
+        ///     Injects script required for collapsible dropdown menu.
+        /// </summary>
+        /// <seealso cref="https://github.com/jordnkr/collapsible"/>
+        private void InjectCollapseScript(HtmlDocument htmlDoc)
+        {
+            var bodyNode = htmlDoc.DocumentNode.SelectSingleNode("//body");
+
+            var accordionNode = htmlDoc.CreateElement("script");
+            accordionNode.InnerHtml = @"
+  $( function() {
+    $( ""#accordion"" ).collapsible();
+  } );";
+            bodyNode.AppendChild(accordionNode);
+
+            var collpasibleScriptNode = htmlDoc.CreateElement("script");
+            collpasibleScriptNode.SetAttributeValue("type", "text/javascript");
+            collpasibleScriptNode.SetAttributeValue("src",
+                "https://cdn.rawgit.com/jordnkr/collapsible/master/jquery.collapsible.min.js");
+            bodyNode.AppendChild(collpasibleScriptNode);
+
+            var headNode = htmlDoc.DocumentNode.SelectSingleNode("//head");
+            var collpasibleCssNode = htmlDoc.CreateElement("link");
+            collpasibleCssNode.SetAttributeValue("rel", "stylesheet");
+            collpasibleCssNode.SetAttributeValue("href",
+                "https://cdn.rawgit.com/jordnkr/collapsible/master/collapsible.css");
+            headNode.AppendChild(collpasibleCssNode);
         }
     }
 }
