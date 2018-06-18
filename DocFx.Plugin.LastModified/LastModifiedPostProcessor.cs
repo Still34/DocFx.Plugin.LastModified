@@ -104,9 +104,9 @@ namespace DocFx.Plugin.LastModified
                 InjectCollapseScript(htmlDoc);
 
                 var collapsibleNode = htmlDoc.CreateElement("div");
-                collapsibleNode.SetAttributeValue("class", "collapse-container");
+                collapsibleNode.SetAttributeValue("class", "collapse-container last-modified");
                 collapsibleNode.SetAttributeValue("id", "accordion");
-                var reasonHeaderNode = htmlDoc.CreateElement("p");
+                var reasonHeaderNode = htmlDoc.CreateElement("span");
                 reasonHeaderNode.InnerHtml = "<span class=\"arrow-r\"></span>Commit Message";
                 var reasonContainerNode = htmlDoc.CreateElement("div");
                 var preCodeBlockNode = htmlDoc.CreateElement("pre");
