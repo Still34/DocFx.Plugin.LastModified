@@ -37,7 +37,7 @@ namespace DocFx.Plugin.LastModified
                     string modifiedReason = null;
                     try
                     {
-                        lastModified = DateTimeOffset.Parse(GetCommitInfo(sourcePath, CommitDataType.Date));
+                        lastModified = DateTimeOffset.Parse(GetCommitInfo(sourcePath, CommitDataType.Date)).ToUniversalTime();
                         modifiedReason = GetCommitInfo(sourcePath, CommitDataType.Body);
                     }
                     catch (Exception e)

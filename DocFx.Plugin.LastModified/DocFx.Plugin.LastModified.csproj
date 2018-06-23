@@ -12,6 +12,8 @@
     <Description>A post-processor plugin for DocFX v2 that adds the last commit date of the conceptual document to the end of the page.</Description>
     <Copyright>Still Hsu © 2018</Copyright>
     <Company />
+    <Authors>Still Hsu</Authors>
+    <Product />
   </PropertyGroup>
 
   <ItemGroup>
