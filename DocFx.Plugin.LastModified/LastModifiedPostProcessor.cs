@@ -33,24 +33,24 @@ namespace DocFx.Plugin.LastModified
             {
                 var sourcePath = Path.Combine(manifest.SourceBasePath, manifestItem.SourceRelativePath);
                 var outputPath = Path.Combine(outputFolder, manifestItemOutputFile.Value.RelativePath);
-                var lastModified = default(DateTimeOffset);
+                DateTimeOffset? lastModified = null;
                 string modifiedReason = null;
                 if (gitDirectory != null)
                 {
-                    var commitInfo = GetCommitInfo(gitDirectory, sourcePath.Replace('/', '\\'));
+                    var commitInfo = GetCommitInfo(gitDirectory, sourcePath);
                     if (commitInfo.Date.HasValue)
                     {
-                        lastModified = commitInfo.Date.Value;
+                        lastModified = commitInfo.Date;
                         modifiedReason = commitInfo.Body;
                     }
                 }
 
-                if (lastModified == default(DateTimeOffset))
+                if (!lastModified.HasValue)
                     lastModified = GetWriteTimeFromFile(sourcePath);
 
                 Logger.LogVerbose(
                     $"Writing {lastModified} for {outputPath} with reason: {(string.IsNullOrEmpty(modifiedReason) ? "Empty" : modifiedReason)}");
-                WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
+                WriteModifiedDate(outputPath, lastModified.Value, modifiedReason);
             }
 
             Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
@@ -66,23 +66,20 @@ namespace DocFx.Plugin.LastModified
                 // hacky solution because libgit2sharp does not provide an easy way
                 // to get the root dir of the repo
                 // and for some reason does not work with forward-slash
-                var repoRoot = new DirectoryInfo(basePath).Parent?.FullName;
+                var repoRoot = basePath.Replace('\\', '/').Replace(".git/", "");
                 if (string.IsNullOrEmpty(repoRoot))
                     throw new DirectoryNotFoundException("Cannot obtain the root directory of the repository.");
 
                 Logger.LogVerbose($"Repository root: {repoRoot}");
                 // remove root dir from absolute path to transform into relative path
-                var sourcePath = srcPath.Replace(repoRoot, "").Replace('\\', '/').TrimStart('/');
+                var sourcePath = srcPath.Replace('\\', '/').Replace(repoRoot, "");
                 Logger.LogVerbose($"Obtaining information from {sourcePath}, from repo {basePath}");
 
                 // see libgit2sharp#1520 for sort issue
-                var fileCommits = repo.Commits
+                var fileCommit = repo.Commits
                     .QueryBy(sourcePath, new CommitFilter {SortBy = CommitSortStrategies.Topological})
-                    .ToList();
-                if (!fileCommits.Any()) return (null, null);
-
-                Logger.LogVerbose($"File commit history: {fileCommits.Count}");
-                var fileCommit = fileCommits.First();
+                    .FirstOrDefault();
+                if (fileCommit == null) return (null, null);
                 return (fileCommit.Commit.Author.When, fileCommit.Commit.Message.Truncate(300));
             }
         }
@@ -90,11 +87,8 @@ namespace DocFx.Plugin.LastModified
         private static DateTimeOffset GetWriteTimeFromFile(string sourcePath)
             => File.GetLastWriteTimeUtc(sourcePath);
 
-        private void WriteModifiedDate(string sourcePath, string outputPath, DateTimeOffset modifiedDate,
-            string modifiedReason = null)
+        private void WriteModifiedDate(string outputPath, DateTimeOffset modifiedDate, string modifiedReason = null)
         {
-            Logger.LogVerbose($"Writing {modifiedDate} from {sourcePath} to {outputPath}");
-
             var htmlDoc = new HtmlDocument();
             htmlDoc.Load(outputPath);
             var articleNode = htmlDoc.DocumentNode.SelectSingleNode("//article[contains(@class, 'content wrap')]");
