@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="htmlagilitypack" Version="1.4.9" />
+    <PackageReference Include="libgit2sharp" Version="0.25.3" />
     <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
     <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.39.0" />
     <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.39.0" />

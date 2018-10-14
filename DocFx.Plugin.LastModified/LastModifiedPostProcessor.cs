@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Immutable;
 using System.Composition;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using HtmlAgilityPack;
+using LibGit2Sharp;
 using Microsoft.DocAsCode.Common;
 using Microsoft.DocAsCode.Plugins;
 
@@ -16,69 +16,68 @@ namespace DocFx.Plugin.LastModified
     {
         private int _addedFiles;
 
-        public ImmutableDictionary<string, object> PrepareMetadata(ImmutableDictionary<string, object> metadata) =>
-            metadata;
+        public ImmutableDictionary<string, object> PrepareMetadata(ImmutableDictionary<string, object> metadata)
+            => metadata;
 
         public Manifest Process(Manifest manifest, string outputFolder)
         {
-            string versionInfo = Assembly.GetExecutingAssembly()
-                                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                                     ?.InformationalVersion ??
-                                 Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            var versionInfo = Assembly.GetExecutingAssembly()
+                                  .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                  ?.InformationalVersion ??
+                              Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            var gitDirectory = Repository.Discover(manifest.SourceBasePath);
             Logger.LogInfo($"Version: {versionInfo}");
             Logger.LogInfo("Begin adding last modified date to items...");
             foreach (var manifestItem in manifest.Files.Where(x => x.DocumentType == "Conceptual"))
+            foreach (var manifestItemOutputFile in manifestItem.OutputFiles)
             {
-                foreach (var manifestItemOutputFile in manifestItem.OutputFiles)
+                var sourcePath = Path.Combine(manifest.SourceBasePath, manifestItem.SourceRelativePath);
+                var outputPath = Path.Combine(outputFolder, manifestItemOutputFile.Value.RelativePath);
+                var lastModified = default(DateTimeOffset);
+                string modifiedReason = null;
+                if (gitDirectory != null)
                 {
-                    string sourcePath = Path.Combine(manifest.SourceBasePath, manifestItem.SourceRelativePath);
-                    string outputPath = Path.Combine(outputFolder, manifestItemOutputFile.Value.RelativePath);
-                    DateTimeOffset lastModified;
-                    string modifiedReason = null;
-                    try
+                    var commitInfo = GetCommitInfo(gitDirectory, sourcePath.Replace('/', '\\'));
+                    if (commitInfo.Date.HasValue)
                     {
-                        lastModified = DateTimeOffset.Parse(GetCommitInfo(sourcePath, CommitDataType.Date)).ToUniversalTime();
-                        modifiedReason = GetCommitInfo(sourcePath, CommitDataType.Body);
+                        lastModified = commitInfo.Date.Value;
+                        modifiedReason = commitInfo.Body;
                     }
-                    catch (Exception e)
-                    {
-                        Logger.LogVerbose(e.ToString());
-                        Logger.LogVerbose("Failed to fetch commit date, falling back to system write time.");
-                        lastModified = GetWriteTimeFromFile(sourcePath);
-                    }
-                    WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
                 }
+
+                if (lastModified == default(DateTimeOffset))
+                    lastModified = GetWriteTimeFromFile(sourcePath);
+
+                WriteModifiedDate(sourcePath, outputPath, lastModified, modifiedReason);
             }
+
             Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
             return manifest;
         }
 
-        private string GetCommitInfo(string sourcePath, CommitDataType dataType)
+        private (DateTimeOffset? Date, string Body) GetCommitInfo(string basePath, string srcPath)
         {
-            string formatString = null;
-            switch (dataType)
+            using (var repo = new Repository(basePath))
             {
-                case CommitDataType.Date:
-                    formatString = "%cd --date=iso8601";
-                    break;
-                case CommitDataType.Body:
-                    formatString = "%B";
-                    break;
+                var sourcePath = srcPath.Replace(basePath.Replace(".git\\", ""), "");
+                Logger.LogInfo($"Obtaining information from {sourcePath}, from repo {basePath}");
+
+                // see libgit2sharp#1520
+                var fileCommits = repo.Commits
+                    .QueryBy(sourcePath)
+                    .ToList();
+                if (!fileCommits.Any()) return (null, null);
+
+                Logger.LogInfo($"File commit history: {fileCommits.Count}");
+                var fileCommit = fileCommits.First();
+                return (fileCommit.Commit.Author.When, fileCommit.Commit.Message);
             }
-            var processStartInfo = new ProcessStartInfo
-            {
-                FileName = "git",
-                Arguments = $"log -1 --format={formatString} {sourcePath}",
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            };
-            var process = System.Diagnostics.Process.Start(processStartInfo);
-            return process?.StandardOutput.ReadToEnd();
         }
 
         private DateTimeOffset GetWriteTimeFromFile(string sourcePath) => File.GetLastWriteTimeUtc(sourcePath);
 
-        private void WriteModifiedDate(string sourcePath, string outputPath, DateTimeOffset modifiedDate, string modifiedReason = null)
+        private void WriteModifiedDate(string sourcePath, string outputPath, DateTimeOffset modifiedDate,
+            string modifiedReason = null)
         {
             Logger.LogVerbose($"Writing {modifiedDate} from {sourcePath} to {outputPath}");
 
@@ -128,7 +127,7 @@ namespace DocFx.Plugin.LastModified
         /// <summary>
         ///     Injects script required for collapsible dropdown menu.
         /// </summary>
-        /// <seealso cref="https://github.com/jordnkr/collapsible"/>
+        /// <seealso cref="!:https://github.com/jordnkr/collapsible" />
         private void InjectCollapseScript(HtmlDocument htmlDoc)
         {
             var bodyNode = htmlDoc.DocumentNode.SelectSingleNode("//body");
@@ -140,18 +139,18 @@ namespace DocFx.Plugin.LastModified
   } );";
             bodyNode.AppendChild(accordionNode);
 
-            var collpasibleScriptNode = htmlDoc.CreateElement("script");
-            collpasibleScriptNode.SetAttributeValue("type", "text/javascript");
-            collpasibleScriptNode.SetAttributeValue("src",
+            var collapsibleScriptNode = htmlDoc.CreateElement("script");
+            collapsibleScriptNode.SetAttributeValue("type", "text/javascript");
+            collapsibleScriptNode.SetAttributeValue("src",
                 "https://cdn.rawgit.com/jordnkr/collapsible/master/jquery.collapsible.min.js");
-            bodyNode.AppendChild(collpasibleScriptNode);
+            bodyNode.AppendChild(collapsibleScriptNode);
 
             var headNode = htmlDoc.DocumentNode.SelectSingleNode("//head");
-            var collpasibleCssNode = htmlDoc.CreateElement("link");
-            collpasibleCssNode.SetAttributeValue("rel", "stylesheet");
-            collpasibleCssNode.SetAttributeValue("href",
+            var collapsibleCssNode = htmlDoc.CreateElement("link");
+            collapsibleCssNode.SetAttributeValue("rel", "stylesheet");
+            collapsibleCssNode.SetAttributeValue("href",
                 "https://cdn.rawgit.com/jordnkr/collapsible/master/collapsible.css");
-            headNode.AppendChild(collpasibleCssNode);
+            headNode.AppendChild(collapsibleCssNode);
         }
     }
 }
