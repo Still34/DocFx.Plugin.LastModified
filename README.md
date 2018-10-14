@@ -9,9 +9,10 @@ A DocFX plugin that adds a last modified date at the end of each conceptual arti
 
 ## Prerequisites
 * Git for the target documentation
+    * This does not require the host to install the git command, only version tracking for the project
 
 ### But I don't track my changes with Git!
-You're a mad man, but that's okay; the plugin will fallback to last modified date on the local machine when Git isn't detected.
+You are a mad man, but that's okay; the plugin will fallback to last modified date on the local machine when Git is not detected.
 
 ## Setup
 1. Download the binaries from the AppVeyor artifacts linked above (or compile yourself).
@@ -35,5 +36,4 @@ You're a mad man, but that's okay; the plugin will fallback to last modified dat
 This plugin is currently being used under [Discord.Net](https://github.com/RogueException/Discord.Net) [Documentation](https://docs.stillu.cc/).
 
 # License
-
 This project is licensed under MIT; read `LICENSE` for more details.

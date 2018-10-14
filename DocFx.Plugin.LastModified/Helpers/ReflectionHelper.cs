@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DocFx.Plugin.LastModified
 {
-    public static class ReflectionUtil
+    public static class ReflectionHelper
     {
         public static string GetReflectedProperties<T>(T input)
         {
