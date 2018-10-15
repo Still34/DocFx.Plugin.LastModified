@@ -4,6 +4,8 @@ using System.Composition;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using DocFx.Plugin.LastModified.Helpers;
 using HtmlAgilityPack;
 using LibGit2Sharp;
 using Microsoft.DocAsCode.Common;
@@ -11,10 +13,14 @@ using Microsoft.DocAsCode.Plugins;
 
 namespace DocFx.Plugin.LastModified
 {
+    /// <summary>
+    ///     Post-processor responsible for injecting last modified date according to commit or file modified date.
+    /// </summary>
     [Export(nameof(LastModifiedPostProcessor), typeof(IPostProcessor))]
     public class LastModifiedPostProcessor : IPostProcessor
     {
         private int _addedFiles;
+        private Repository _repo;
 
         public ImmutableDictionary<string, object> PrepareMetadata(ImmutableDictionary<string, object> metadata)
             => metadata;
@@ -25,72 +31,63 @@ namespace DocFx.Plugin.LastModified
                                   .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                                   ?.InformationalVersion ??
                               Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            var gitDirectory = Repository.Discover(manifest.SourceBasePath);
             Logger.LogInfo($"Version: {versionInfo}");
             Logger.LogInfo("Begin adding last modified date to items...");
+
+            // attempt to fetch git repo from the current project
+            var gitDirectory = Repository.Discover(manifest.SourceBasePath);
+            if (gitDirectory != null) _repo = new Repository(gitDirectory);
+
             foreach (var manifestItem in manifest.Files.Where(x => x.DocumentType == "Conceptual"))
             foreach (var manifestItemOutputFile in manifestItem.OutputFiles)
             {
                 var sourcePath = Path.Combine(manifest.SourceBasePath, manifestItem.SourceRelativePath);
                 var outputPath = Path.Combine(outputFolder, manifestItemOutputFile.Value.RelativePath);
-                DateTimeOffset? lastModified = null;
-                string modifiedReason = null;
-                if (gitDirectory != null)
+                if (_repo != null)
                 {
-                    var commitInfo = GetCommitInfo(gitDirectory, sourcePath);
-                    if (commitInfo.Date.HasValue)
+                    var commitInfo = _repo.GetCommitInfo(sourcePath);
+                    if (commitInfo != null)
                     {
-                        lastModified = commitInfo.Date;
-                        modifiedReason = commitInfo.Body;
+                        Logger.LogVerbose("Assigning commit date...");
+                        var lastModified = commitInfo.Author.When;
+
+                        var commitHeaderBuilder = new StringBuilder();
+                        Logger.LogVerbose("Appending commit author and email...");
+                        commitHeaderBuilder.AppendLine($"Author:  {commitInfo.Author.Name}");
+                        Logger.LogVerbose("Appending commit SHA...");
+                        commitHeaderBuilder.AppendLine($"Commit:     {commitInfo.Sha}");
+                        
+                        var commitHeader = commitHeaderBuilder.ToString();
+                        // truncate to 200 in case of huge commit body
+                        var commitBody = commitInfo.Message.Truncate(200);
+                        Logger.LogVerbose($"Writing {lastModified} with reason for {outputPath}...");
+                        WriteModifiedDate(outputPath, lastModified, commitHeader, commitBody);
+                        continue;
                     }
                 }
 
-                if (!lastModified.HasValue)
-                    lastModified = GetWriteTimeFromFile(sourcePath);
-
-                Logger.LogVerbose(
-                    $"Writing {lastModified} for {outputPath} with reason: {(string.IsNullOrEmpty(modifiedReason) ? "Empty" : modifiedReason)}");
-                WriteModifiedDate(outputPath, lastModified.Value, modifiedReason);
+                var fileLastModified = File.GetLastWriteTimeUtc(sourcePath);
+                Logger.LogVerbose($"Writing {fileLastModified} for {outputPath}...");
+                WriteModifiedDate(outputPath, fileLastModified);
             }
+
+            // dispose repo after usage
+            _repo?.Dispose();
 
             Logger.LogInfo($"Added modification date to {_addedFiles} conceptual articles.");
             return manifest;
         }
 
-        private (DateTimeOffset? Date, string Body) GetCommitInfo(string basePath, string srcPath)
+        private void WriteModifiedDate(string outputPath, DateTimeOffset modifiedDate, string commitHeader = null,
+            string commitBody = null)
         {
-            using (var repo = new Repository(basePath))
-            {
-                // attempt to fetch root dir of repo
+            if (outputPath == null) throw new ArgumentNullException(nameof(outputPath));
 
-                // hacky solution because libgit2sharp does not provide an easy way
-                // to get the root dir of the repo
-                // and for some reason does not work with forward-slash
-                var repoRoot = basePath.Replace('\\', '/').Replace(".git/", "");
-                if (string.IsNullOrEmpty(repoRoot))
-                    throw new DirectoryNotFoundException("Cannot obtain the root directory of the repository.");
-
-                Logger.LogVerbose($"Repository root: {repoRoot}");
-                // remove root dir from absolute path to transform into relative path
-                var sourcePath = srcPath.Replace('\\', '/').Replace(repoRoot, "");
-                Logger.LogVerbose($"Obtaining information from {sourcePath}, from repo {basePath}");
-
-                // see libgit2sharp#1520 for sort issue
-                var fileCommit = repo.Commits
-                    .QueryBy(sourcePath, new CommitFilter {SortBy = CommitSortStrategies.Topological})
-                    .FirstOrDefault();
-                if (fileCommit == null) return (null, null);
-                return (fileCommit.Commit.Author.When, fileCommit.Commit.Message.Truncate(300));
-            }
-        }
-
-        private static DateTimeOffset GetWriteTimeFromFile(string sourcePath)
-            => File.GetLastWriteTimeUtc(sourcePath);
-
-        private void WriteModifiedDate(string outputPath, DateTimeOffset modifiedDate, string modifiedReason = null)
-        {
+            // load the document
             var htmlDoc = new HtmlDocument();
             htmlDoc.Load(outputPath);
+
+            // check for article container
             var articleNode = htmlDoc.DocumentNode.SelectSingleNode("//article[contains(@class, 'content wrap')]");
             if (articleNode == null)
             {
@@ -100,29 +97,39 @@ namespace DocFx.Plugin.LastModified
 
             var paragraphNode = htmlDoc.CreateElement("p");
             paragraphNode.InnerHtml = $"This page was last modified at {modifiedDate} (UTC).";
-
             var separatorNode = htmlDoc.CreateElement("hr");
-
             articleNode.AppendChild(separatorNode);
             articleNode.AppendChild(paragraphNode);
 
-            if (!string.IsNullOrEmpty(modifiedReason))
+            if (!string.IsNullOrEmpty(commitHeader))
             {
+                // inject collapsible container script
                 InjectCollapseScript(htmlDoc);
 
+                // create collapse container
                 var collapsibleNode = htmlDoc.CreateElement("div");
                 collapsibleNode.SetAttributeValue("class", "collapse-container last-modified");
                 collapsibleNode.SetAttributeValue("id", "accordion");
                 var reasonHeaderNode = htmlDoc.CreateElement("span");
                 reasonHeaderNode.InnerHtml = "<span class=\"arrow-r\"></span>Commit Message";
                 var reasonContainerNode = htmlDoc.CreateElement("div");
+
+                // inject header
                 var preCodeBlockNode = htmlDoc.CreateElement("pre");
                 var codeBlockNode = htmlDoc.CreateElement("code");
-                codeBlockNode.SetAttributeValue("class", "xml");
-                codeBlockNode.InnerHtml = modifiedReason.Trim();
-
+                codeBlockNode.InnerHtml = commitHeader;
                 preCodeBlockNode.AppendChild(codeBlockNode);
                 reasonContainerNode.AppendChild(preCodeBlockNode);
+                
+                // inject body
+                preCodeBlockNode = htmlDoc.CreateElement("pre");
+                codeBlockNode = htmlDoc.CreateElement("code");
+                codeBlockNode.SetAttributeValue("class", "xml");
+                codeBlockNode.InnerHtml = commitBody;
+                preCodeBlockNode.AppendChild(codeBlockNode);
+                reasonContainerNode.AppendChild(preCodeBlockNode);
+
+                // inject the entire block
                 collapsibleNode.AppendChild(reasonHeaderNode);
                 collapsibleNode.AppendChild(reasonContainerNode);
                 articleNode.AppendChild(collapsibleNode);
@@ -136,7 +143,7 @@ namespace DocFx.Plugin.LastModified
         ///     Injects script required for collapsible dropdown menu.
         /// </summary>
         /// <seealso cref="!:https://github.com/jordnkr/collapsible" />
-        private void InjectCollapseScript(HtmlDocument htmlDoc)
+        private static void InjectCollapseScript(HtmlDocument htmlDoc)
         {
             var bodyNode = htmlDoc.DocumentNode.SelectSingleNode("//body");
 

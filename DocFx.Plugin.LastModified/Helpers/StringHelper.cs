@@ -1,12 +1,22 @@
 ﻿using System.Linq;
 
-namespace DocFx.Plugin.LastModified
+namespace DocFx.Plugin.LastModified.Helpers
 {
     public static class StringHelper
     {
-        // Modified from Humanizr/Humanizer
-        // The MIT License (c)
-        // Copyright (c) .NET Foundation and Contributors
+        /// <summary>
+        ///     Truncates the string to match the specified <paramref name="length"/>.
+        /// </summary>
+        /// <remarks>
+        ///     <para>This method is retrieved and modified from Humanizr/Humanizer.</para>
+        ///     <para>MIT License (c)</para>
+        ///     <para>Copyright (c) .NET Foundation and Contributors</para>
+        /// </remarks>
+        /// <param name="value">The string to truncate.</param>
+        /// <param name="length">The target maximum length of the string.</param>
+        /// <returns>
+        ///     A truncated string based on the <paramref name="length" /> specified.
+        /// </returns>
         public static string Truncate(this string value, int length)
         {
             var truncationString = "...";
