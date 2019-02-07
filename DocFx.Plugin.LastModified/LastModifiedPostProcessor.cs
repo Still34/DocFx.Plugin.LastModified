@@ -59,7 +59,7 @@ namespace DocFx.Plugin.LastModified
                         
                         var commitHeader = commitHeaderBuilder.ToString();
                         // truncate to 200 in case of huge commit body
-                        var commitBody = commitInfo.Message.Truncate(200);
+                        var commitBody = commitInfo.Message.Truncate(300);
                         Logger.LogVerbose($"Writing {lastModified} with reason for {outputPath}...");
                         WriteModifiedDate(outputPath, lastModified, commitHeader, commitBody);
                         continue;
