@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Immutable;
 using System.Composition;
 using System.IO;
@@ -53,9 +53,9 @@ namespace DocFx.Plugin.LastModified
 
                         var commitHeaderBuilder = new StringBuilder();
                         Logger.LogVerbose("Appending commit author and email...");
-                        commitHeaderBuilder.AppendLine($"Author:  {commitInfo.Author.Name}");
+                        commitHeaderBuilder.AppendLine($"Author:    {commitInfo.Author.Name}");
                         Logger.LogVerbose("Appending commit SHA...");
-                        commitHeaderBuilder.AppendLine($"Commit:     {commitInfo.Sha}");
+                        commitHeaderBuilder.AppendLine($"Commit:    {commitInfo.Sha}");
                         
                         var commitHeader = commitHeaderBuilder.ToString();
                         // truncate to 200 in case of huge commit body
