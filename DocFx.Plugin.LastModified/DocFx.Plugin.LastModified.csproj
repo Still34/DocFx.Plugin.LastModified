@@ -4,7 +4,7 @@
     <TargetFramework>net461</TargetFramework>
     <AssemblyName>LastModifiedPostProcessor</AssemblyName>
     <RootNamespace>DocFx.Plugin.LastModified</RootNamespace>
-    <Version>1.2.3</Version>
+    <Version>1.2.4</Version>
     <RepositoryUrl>https://github.com/Still34/DocFx.Plugin.LastModified</RepositoryUrl>
     <PackageLicenseUrl>https://github.com/Still34/DocFx.Plugin.LastModified/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>GitHub</RepositoryType>
@@ -18,10 +18,10 @@
 
   <ItemGroup>
     <PackageReference Include="htmlagilitypack" Version="1.4.9" />
-    <PackageReference Include="libgit2sharp" Version="0.26.0-rc1" />
+    <PackageReference Include="libgit2sharp" Version="0.27.0-preview-0034" />
     <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
-    <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.40.10" />
-    <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.40.10" />
+    <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.56.2" />
+    <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.56.2" />
   </ItemGroup>
 
 </Project>
