@@ -10,18 +10,19 @@
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>DocFX</PackageTags>
     <Description>A post-processor plugin for DocFX v2 that adds the last commit date of the conceptual document to the end of the page.</Description>
-    <Copyright>Still Hsu © 2018</Copyright>
+    <Copyright>Still Hsu © 2021</Copyright>
     <Company />
     <Authors>Still Hsu</Authors>
     <Product />
+    <PackageVersion>1.2.5</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="htmlagilitypack" Version="1.4.9" />
-    <PackageReference Include="libgit2sharp" Version="0.27.0-preview-0034" />
+    <PackageReference Include="libgit2sharp" Version="0.27.0-preview-0096" />
     <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
-    <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.56.2" />
-    <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.56.2" />
+    <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.57.2" />
+    <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.57.2" />
   </ItemGroup>
 
 </Project>
