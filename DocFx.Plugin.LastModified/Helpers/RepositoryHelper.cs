@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq;
 using LibGit2Sharp;
-using Microsoft.DocAsCode.Common;
+using Docfx.Common;
 
 namespace DocFx.Plugin.LastModified.Helpers
 {

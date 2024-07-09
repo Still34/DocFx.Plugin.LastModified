@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net461</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>LastModifiedPostProcessor</AssemblyName>
     <RootNamespace>DocFx.Plugin.LastModified</RootNamespace>
-    <Version>1.2.4</Version>
+    <Version>1.2.6</Version>
     <RepositoryUrl>https://github.com/Still34/DocFx.Plugin.LastModified</RepositoryUrl>
     <PackageLicenseUrl>https://github.com/Still34/DocFx.Plugin.LastModified/blob/master/LICENSE</PackageLicenseUrl>
     <RepositoryType>GitHub</RepositoryType>
@@ -14,15 +14,15 @@
     <Company />
     <Authors>Still Hsu</Authors>
     <Product />
-    <PackageVersion>1.2.5</PackageVersion>
+    <PackageVersion>1.2.6</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="htmlagilitypack" Version="1.4.9" />
-    <PackageReference Include="libgit2sharp" Version="0.27.0-preview-0096" />
-    <PackageReference Include="Microsoft.Composition" Version="1.0.31" />
-    <PackageReference Include="Microsoft.DocAsCode.Common" Version="2.57.2" />
-    <PackageReference Include="Microsoft.DocAsCode.Plugins" Version="2.57.2" />
+    <PackageReference Include="htmlagilitypack" Version="1.11.61" />
+    <PackageReference Include="libgit2sharp" Version="0.30.0" />
+    <PackageReference Include="System.Composition" Version="8.0.0" />
+    <PackageReference Include="Docfx.Common" Version="2.77.0" />
+    <PackageReference Include="Docfx.Plugins" Version="2.77.0" />
   </ItemGroup>
 
 </Project>
